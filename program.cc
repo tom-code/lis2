@@ -39,6 +39,7 @@ void dump_all() {
 void setup() {
   //AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF; // free jtag pins
   //AFIO_MAPR |= AFIO_MAPR_USART1_REMAP;
+  AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_FULL_SWJ_NO_JNTRST; // free jtag pins
 
 
   p_status->setup("p_status", GPIOC, GPIO13);
@@ -54,13 +55,13 @@ void setup() {
   p_lid->setup("p_lid", GPIOA, GPIO1);
   p_lih->setup("p_lih", GPIOA, GPIO0);
 
-  s_zfz->setup  ("s_zfz",   -1, 0);
-  s_zfo->setup  ("s_zfo",   -1, 0);
-  p_fzoff->setup("p_fzoff", -1, 0);
-  p_fzon->setup ("p_fzon",  -1, 0);
+  s_zfz->setup  ("s_zfz",   GPIOB, GPIO5);
+  s_zfo->setup  ("s_zfo",   GPIOB, GPIO4);
+  p_fzoff->setup("p_fzoff", GPIOA, GPIO3);
+  p_fzon->setup ("p_fzon",  GPIOA, GPIO2);
 
-  s_dfo->setup ("s_dfo",  -1, 0);
-  s_dfz->setup ("s_dfz",  -1, 0);
+  s_dfo->setup ("s_dfo",  GPIOA, GPIO9);
+  s_dfz->setup ("s_dfz",  GPIOA, GPIO10);
 
   usart_setup();
   usart1_send("hello\n\r");
