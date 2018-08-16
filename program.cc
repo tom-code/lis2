@@ -102,6 +102,10 @@ void handle_start() {
 void handle_test_formy_start();
 void handle_test_lisu() {
   if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
+     stav = stav_t::ERR;
+
+  }
+  if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
     stav = stav_t::ERR;
     log("lis v ref i krajni poloze -> error");
     return;
@@ -124,6 +128,11 @@ void handle_test_lisu() {
   }
 }
 
+void usart_command(char cmd) {
+  char s = cmd-0x30;
+  if (s > 9) return;
+  stav = (stav_t)s;
+}
 
 enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 const char *test_formy_string(stav_test_formy_t s) {
@@ -178,13 +187,20 @@ void handle_kontrola() {
 }
 
 int tt = 0;
+int last_millis = 0;
 void tick() {
 #ifndef TEST
   if ((millis() % 1000) < 100) p_status->set(STAV_H); else p_status->set(STAV_L);
 #endif
   tt = tt+1;
-  if ((tt % 100000) == 0) usart1_send(get_stav(stav));
-  if ((tt % 100000) == 5000) usart1_send("\r\n");
+  int now = millis();
+  if (now != last_millis) {
+    if ((now % 500) == 0) usart1_send(get_stav(stav));
+    if ((now % 500) == 200) usart1_send("\r\n");
+    last_millis = now;
+  }
+  //if ((tt % 100000) == 0) usart1_send(get_stav(stav));
+  //if ((tt % 100000) == 5000) usart1_send("\r\n");
   INFO("\ntick stav=%s cas=%d", get_stav(stav), time); time++;
   switch (stav) {
     case stav_t::ERR: break;

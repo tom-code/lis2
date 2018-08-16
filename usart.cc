@@ -45,13 +45,15 @@ void usart1_send(const char *data) {
   USART_CR1(USART1) |= USART_CR1_TXEIE;
 }
 
+extern void usart_command(char data);
 extern "C" void usart1_isr(void)
 {
   /* Check if we were called because of RXNE. */
   if (((USART_CR1(USART1) & USART_CR1_RXNEIE) != 0) && ((USART_SR(USART1) & USART_SR_RXNE) != 0)) {
 
-    /*data = */usart_recv(USART1);
-    usart1_send("don't disturb\n\r");
+    char data = usart_recv(USART1);
+    usart1_send("\n\rreceived command\n\r");
+    usart_command(data);
   }
 
   /* Check if we were called because of TXE. */
