@@ -37,12 +37,14 @@ void dump_all() {
 }
 
 void setup() {
-  AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF; // free jtag pins
+  //AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF; // free jtag pins
+  //AFIO_MAPR |= AFIO_MAPR_USART1_REMAP;
+
 
   p_status->setup("p_status", GPIOC, GPIO13);
 
 
-  s_start->setup("s_start", GPIOB, GPIO3);
+  s_start->setup("s_start", GPIOB, GPIO8);
 
   p_rdy->setup("p_rdy", GPIOA, GPIO7);
   s_lih->setup("s_lih", GPIOB, GPIO15);
@@ -177,7 +179,7 @@ void handle_kontrola() {
 int tt = 0;
 void tick() {
 #ifndef TEST
-  if ((millis() % 1000) < 500) p_status->set(STAV_H); else p_status->set(STAV_L);
+  if ((millis() % 1000) < 100) p_status->set(STAV_H); else p_status->set(STAV_L);
 #endif
   tt = tt+1;
   if ((tt % 100000) == 0) usart1_send(get_stav(stav));
