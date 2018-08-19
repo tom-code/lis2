@@ -9,7 +9,8 @@
 #include <vector>
 #include <string.h>
 
-auto p_status = new povel_t();
+//auto p_status = new povel_t();
+auto p_status = new blikac_t();
 
 
 auto s_start = new signal_t();
@@ -31,7 +32,7 @@ auto s_dfz = new signal_t();
 auto pm_fot = new povel_t();
 auto pm_fza = new povel_t();
 
-std::vector<component_t*> components {s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
+std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
 
 void dump_all() {
 #if TEST
@@ -78,7 +79,7 @@ void setup() {
 }
 
 
-enum class stav_t  {ERR, START, TEST_LISU, TEST_FORMY, KONTROLA, PLNENI_FORMY};
+enum class stav_t  {ERR, START, TEST_LISU, TEST_FORMY, KONTROLA, PLNENI_FORMY, LISOVANI};
 static const char *get_stav(stav_t s) {
   switch (s) {
     case stav_t::ERR: return "ERR";
@@ -87,6 +88,7 @@ static const char *get_stav(stav_t s) {
     case stav_t::TEST_FORMY: return "TEST_FORMY";
     case stav_t::PLNENI_FORMY: return "PLNENI_FORMY";
     case stav_t::KONTROLA: return "KONTROLA";
+    case stav_t::LISOVANI: return "LISOVANI";
   }
   return "??";
 }
@@ -138,6 +140,8 @@ void handle_test_lisu() {
   }
 }
 
+enum class stav_plneni_formy_t  {START, LIS_JEDE_HORE, LIS_JEDE_DOLU};
+stav_plneni_formy_t stav_plneni_formy;
 
 enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 stav_test_formy_t stav_test_formy = stav_test_formy_t::ERR;
@@ -146,6 +150,8 @@ void usart_command(char cmd) {
   if (s > 9) return;
   stav = (stav_t)s;
   if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
+  if (stav == stav_t::PLNENI_FORMY) stav_plneni_formy = stav_plneni_formy_t::START;
+
 }
 
 const char *test_formy_string(stav_test_formy_t s) {
@@ -206,8 +212,30 @@ void handle_kontrola() {
   if (s_zfz->get() != STAV_L) return;
   if (s_lir->get() != STAV_L) return;
   stav = stav_t::PLNENI_FORMY;
+  stav_plneni_formy = stav_plneni_formy_t::START;
 }
 
+void handle_plneni_formy() {
+  if (stav_plneni_formy == stav_plneni_formy_t::START) {
+    p_lid->set(STAV_L);
+    p_lih->set(STAV_H);
+    stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_HORE;
+    return;
+  }
+  if (stav_plneni_formy == stav_plneni_formy_t::LIS_JEDE_HORE) {
+    if (s_lih->get() != STAV_L) return;
+    p_lid->set(STAV_H);
+    p_lih->set(STAV_L);
+    stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_DOLU;
+    return;
+  }
+  if (stav_plneni_formy == stav_plneni_formy_t::LIS_JEDE_DOLU) {
+    if (s_lid->get() != STAV_L) return;
+    p_lih->set(STAV_L);
+    p_lid->set(STAV_L);
+    stav = stav_t::LISOVANI;
+  }
+}
 
 void send_debug() {
   char buf[1000];
@@ -222,6 +250,14 @@ void send_debug() {
       default: strcat(buf, " ???"); break;
     }
   }
+  if (stav == stav_t::PLNENI_FORMY) {
+    switch (stav_plneni_formy) {
+      case stav_plneni_formy_t::START: strcat(buf, " start"); break;
+      case stav_plneni_formy_t::LIS_JEDE_HORE: strcat(buf, " jede nahoru"); break;
+      case stav_plneni_formy_t::LIS_JEDE_DOLU: strcat(buf, " jede_dolu"); break;
+      default: strcat(buf, " ???"); break;
+    }
+  }
   //if (s_dfo->get() == STAV_L) strcat(buf, " aaa");
   //if (s_dfo->get() == STAV_H) strcat(buf, " bbb");
   strcat(buf, "\r\n");
@@ -231,9 +267,10 @@ void send_debug() {
 int tt = 0;
 int last_millis = 0;
 void tick() {
-#ifndef TEST
-  if ((millis() % 1000) < 100) p_status->set(STAV_H); else p_status->set(STAV_L);
-#endif
+//#ifndef TEST
+//  if ((millis() % 1000) < 100) p_status->set(STAV_H); else p_status->set(STAV_L);
+//#endif
+  p_status->set(5);
   tt = tt+1;
   int now = millis();
   if (now != last_millis) {
@@ -242,8 +279,6 @@ void tick() {
     if ((now % 500) == 0) send_debug();
     last_millis = now;
   }
-  //if ((tt % 100000) == 0) usart1_send(get_stav(stav));
-  //if ((tt % 100000) == 5000) usart1_send("\r\n");
   INFO("\ntick stav=%s cas=%d", get_stav(stav), time); time++;
   switch (stav) {
     case stav_t::ERR: break;
@@ -251,7 +286,8 @@ void tick() {
     case stav_t::TEST_LISU: handle_test_lisu(); break;
     case stav_t::TEST_FORMY: handle_test_formy(); break;
     case stav_t::KONTROLA: handle_kontrola(); break;
-    case stav_t::PLNENI_FORMY: break;
+    case stav_t::PLNENI_FORMY: handle_plneni_formy(); break;
+    case stav_t::LISOVANI: break;
   }
   dump_all();
   tick_all();

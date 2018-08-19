@@ -124,3 +124,43 @@ struct povel_t : public component_t {
   }
 
 };
+
+struct blikac_t : public component_t {
+  int stav;
+  int max = 10;
+  const char *name;
+  int pin, port;
+
+  void setup(const char *_name, int _port, int _pin) {
+    port = _port;
+    pin = _pin;
+    if (port != -1)
+      gpio_set_mode(port, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, pin);
+    stav = STAV_L;
+  }
+  
+  void set(int _stav) {
+    stav = _stav;
+    max = stav+2;
+  }
+
+  void tick() {
+    int slot = (millis()/200) % (max*2);
+
+    if ((slot % 2) == 0) {
+      gpio_set(port, pin);
+      return;
+    } else {
+    //gpio_set(port, pin);
+      if (slot<(stav*2)) gpio_clear(port, pin);
+    }
+  }
+
+  void dump() {
+    SIMPLE(" %s:%d\n", name, stav);
+  }
+  const char *get_name() {
+    return name;
+  }
+
+};
