@@ -7,6 +7,7 @@
 #include "signal.h"
 
 #include <vector>
+#include <string.h>
 
 auto p_status = new povel_t();
 
@@ -24,16 +25,22 @@ auto s_zfz = new signal_t();
 auto s_zfo = new signal_t();
 auto p_fzoff = new povel_t();
 auto p_fzon = new povel_t();
-auto s_dfo = new signal_t();
+auto s_dfo = new timed_signal_t();
 auto s_dfz = new signal_t();
 
-std::vector<component_t*> components {s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz};
+auto pm_fot = new povel_t();
+auto pm_fza = new povel_t();
+
+std::vector<component_t*> components {s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
 
 void dump_all() {
 #if TEST
   for (auto c : components) c->dump();
     SIMPLE("\n");
 #endif
+}
+void tick_all() {
+  for (auto c : components) c->tick();
 }
 
 void setup() {
@@ -62,6 +69,9 @@ void setup() {
 
   s_dfo->setup ("s_dfo",  GPIOA, GPIO9);
   s_dfz->setup ("s_dfz",  GPIOA, GPIO10);
+
+  pm_fot->setup ("pm_fot",  GPIOB, GPIO1);
+  pm_fza->setup ("pm_fza",  GPIOB, GPIO0);
 
   usart_setup();
   usart1_send("hello\n\r");
@@ -113,8 +123,8 @@ void handle_test_lisu() {
   if (s_lir->get() == STAV_L) {
     log("lis v ref poloze -> test formy");
     handle_test_formy_start();
-    p_lid->set(STAV_H);
-    p_lih->set(STAV_H);
+    p_lid->set(STAV_L);
+    p_lih->set(STAV_L);
     return;
   }
   if (s_lip->get() == STAV_H) {
@@ -128,13 +138,16 @@ void handle_test_lisu() {
   }
 }
 
+
+enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
+stav_test_formy_t stav_test_formy = stav_test_formy_t::ERR;
 void usart_command(char cmd) {
   char s = cmd-0x30;
   if (s > 9) return;
   stav = (stav_t)s;
+  if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
 }
 
-enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 const char *test_formy_string(stav_test_formy_t s) {
   switch (s) {
     case stav_test_formy_t::ERR: return "ERR";
@@ -145,7 +158,6 @@ const char *test_formy_string(stav_test_formy_t s) {
   }
   return "??";
 }
-stav_test_formy_t stav_test_formy = stav_test_formy_t::ERR;
 void handle_test_formy_start() {
   log("test formy start");
   stav = stav_t::TEST_FORMY;
@@ -160,15 +172,25 @@ void handle_test_formy() {
     } else {
       stav_test_formy = stav_test_formy_t::OTEVIRAM;
       p_fzoff->set(STAV_L);
+//poslat b1
+      pm_fot->set(STAV_H);
       return;
     }
   }
   if (stav_test_formy == stav_test_formy_t::OTEVIRAM) {
     if (s_dfo->get() != STAV_L) return;
+//b1 off
+    pm_fot->set(STAV_L);
+    pm_fza->set(STAV_H);
+//pockat 2 vteriny
     stav_test_formy = stav_test_formy_t::ZAVIRAM;
+//poslat b0
   }
+
   if (stav_test_formy == stav_test_formy_t::ZAVIRAM) {
     if (s_dfz->get() != STAV_L) return;
+//b0 off
+    pm_fza->set(STAV_L);
     stav_test_formy = stav_test_formy_t::ZAJISTUJI;
     p_fzon->set(STAV_H);
   }
@@ -186,6 +208,24 @@ void handle_kontrola() {
   stav = stav_t::PLNENI_FORMY;
 }
 
+
+void send_debug() {
+  char buf[1000];
+  strcpy(buf, get_stav(stav));
+  if (stav == stav_t::TEST_FORMY) {
+    switch (stav_test_formy) {
+      case stav_test_formy_t::ODJISTUJI: strcat(buf, " odjistuji"); break;
+      case stav_test_formy_t::OTEVIRAM: strcat(buf, " oteviram"); break;
+      case stav_test_formy_t::ZAVIRAM: strcat(buf, " zaviram"); break;
+      case stav_test_formy_t::ZAJISTUJI: strcat(buf, " zajistuji"); break;
+      case stav_test_formy_t::ERR: strcat(buf, " error"); break;
+      default: strcat(buf, " ???"); break;
+    }
+  }
+  strcat(buf, "\r\n");
+  usart1_send(buf);
+}
+
 int tt = 0;
 int last_millis = 0;
 void tick() {
@@ -195,8 +235,9 @@ void tick() {
   tt = tt+1;
   int now = millis();
   if (now != last_millis) {
-    if ((now % 500) == 0) usart1_send(get_stav(stav));
-    if ((now % 500) == 200) usart1_send("\r\n");
+    //if ((now % 500) == 0) usart1_send(get_stav(stav));
+    //if ((now % 500) == 200) usart1_send("\r\n");
+    if ((now % 500) == 0) send_debug();
     last_millis = now;
   }
   //if ((tt % 100000) == 0) usart1_send(get_stav(stav));
@@ -211,6 +252,7 @@ void tick() {
     case stav_t::PLNENI_FORMY: break;
   }
   dump_all();
+  tick_all();
 }
 
 extern "C" void my_setup() {

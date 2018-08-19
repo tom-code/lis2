@@ -39,6 +39,51 @@ struct signal_t : public component_t {
   }
 };
 
+struct timed_signal_t : public component_t {
+
+  int stav;
+  int curr_stav;
+  int curr_time;
+  const char *name;
+  int port, pin;
+
+  void setup(const char *_name, int _port, int _pin) {
+    port = _port;
+    pin = _pin;
+    if (port != -1) {
+      gpio_set_mode(port, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, pin);
+      gpio_set(port, pin); //this controls up/down?
+    }
+    stav = STAV_H;
+    curr_stav = STAV_H;
+    curr_time = millis();
+  }
+
+  void tick() {
+    if (port == -1) return;
+    int tmp = (gpio_get(port, pin) && true);
+    if (tmp != curr_stav) {
+      curr_stav = tmp;
+      curr_time = millis();
+      return;
+    }
+    if (stav != curr_stav)
+      if ((curr_time+2000) < millis())
+        stav = curr_stav;
+  }
+
+  int get() {
+    return stav;
+  }
+ 
+  void dump() {
+    SIMPLE(" %s:%d\n", name, stav);
+  }
+
+  const char *get_name() {
+    return name;
+  }
+};
 
 struct povel_t : public component_t {
   int stav;
