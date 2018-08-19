@@ -222,6 +222,8 @@ void send_debug() {
       default: strcat(buf, " ???"); break;
     }
   }
+  //if (s_dfo->get() == STAV_L) strcat(buf, " aaa");
+  //if (s_dfo->get() == STAV_H) strcat(buf, " bbb");
   strcat(buf, "\r\n");
   usart1_send(buf);
 }

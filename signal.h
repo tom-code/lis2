@@ -46,6 +46,8 @@ struct timed_signal_t : public component_t {
   int curr_time;
   const char *name;
   int port, pin;
+  int up_time = 1;
+  int down_time = 2000;
 
   void setup(const char *_name, int _port, int _pin) {
     port = _port;
@@ -67,9 +69,10 @@ struct timed_signal_t : public component_t {
       curr_time = millis();
       return;
     }
-    if (stav != curr_stav)
-      if ((curr_time+2000) < millis())
-        stav = curr_stav;
+    if (stav != curr_stav) {
+      if (curr_stav == STAV_H && ((curr_time+up_time) < millis())) stav = curr_stav;
+      if (curr_stav == STAV_L && ((curr_time+down_time) < millis())) stav = curr_stav;
+    }
   }
 
   int get() {
