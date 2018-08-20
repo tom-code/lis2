@@ -9,7 +9,7 @@ CXXFLAGS = -Wall -Wextra -g3 -O0 -MD $(CPUFLAGS) -DSTM32F1 -Ilibopencm3/include 
 LDFLAGS = $(CPUFLAGS) -nostartfiles -Llibopencm3/lib -Wl,-T,pill.ld -static
 LDLIBS = -lstdc++_nano -lc_nano -lopencm3_stm32f1 -lnosys
 
-OBJ = main.o program.o usart.o
+OBJ = main.o program.o usart.o flash.o
 
 test1.elf: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LDLIBS)

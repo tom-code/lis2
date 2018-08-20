@@ -1,4 +1,5 @@
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/flash.h>
 
 #include "usart.h"
 #include "utils.h"
@@ -8,10 +9,10 @@
 
 #include <vector>
 #include <string.h>
+#include <stdlib.h>
 
 
-
-int cas_plneni = 3000;
+uint32_t cas_plneni = 3000;
 //auto p_status = new povel_t();
 auto p_status = new blikac_t();
 
@@ -77,8 +78,17 @@ void setup() {
   pm_fot->setup ("pm_fot",  GPIOB, GPIO1);
   pm_fza->setup ("pm_fza",  GPIOB, GPIO0);
 
+
+  cas_plneni = *((uint32_t*)0x800f000);
+  if (cas_plneni > 100000) cas_plneni = 2000;
+
   usart_setup();
-  usart1_send("hello\n\r");
+
+  char buf[32];
+  strcpy(buf, "\r\n hello  ");
+  utoa(cas_plneni, buf+9, 10);
+  strcat(buf, "\r\n");
+  usart1_send(buf);
 }
 
 
@@ -173,6 +183,7 @@ void handle_test_formy_start() {
   stav = stav_t::TEST_FORMY;
   stav_test_formy = stav_test_formy_t::ODJISTUJI;
 }
+
 void handle_test_formy() {
   INFO("test formy stav: %s", test_formy_string(stav_test_formy));
   if (stav_test_formy == stav_test_formy_t::ODJISTUJI) {
@@ -240,7 +251,7 @@ void handle_plneni_formy() {
     return;
   }
   if (stav_plneni_formy == stav_plneni_formy_t::LIS_CEKA) {
-    if ((list_ceka_start+cas_plneni) > millis()) return;
+    if ((list_ceka_start+(int)cas_plneni) > millis()) return;
     stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_DOLU;
   }
   if (stav_plneni_formy == stav_plneni_formy_t::LIS_JEDE_DOLU) {
@@ -276,6 +287,10 @@ void usart_command(char cmd) {
 void send_debug() {
   char buf[1000];
   strcpy(buf, get_stav(stav));
+  if (stav == stav_t::START) {
+    strcat(buf, " cas_plneni:");
+    utoa(cas_plneni, buf+strlen(buf), 10);
+  }
   if (stav == stav_t::TEST_FORMY) {
     switch (stav_test_formy) {
       case stav_test_formy_t::ODJISTUJI: strcat(buf, " odjistuji"); break;
@@ -331,9 +346,12 @@ void tick() {
   tick_all();
 }
 
+void xflash_write(uint32_t data);
+
 extern "C" void my_setup() {
   setup();
   reset();
+//  xflash_write(1000);
 }
 extern "C" void my_loop() {
   tick();
