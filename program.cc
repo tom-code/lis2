@@ -38,6 +38,7 @@ auto pm_fza = new povel_t();
 
 std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
 
+void xflash_write(uint32_t data);
 void dump_all() {
 #if TEST
   for (auto c : components) c->dump();
@@ -276,6 +277,11 @@ void handle_lisovani() {
   }
 }
 void usart_command(char cmd) {
+
+  if (cmd == 'z') if (cas_plneni > 100) cas_plneni-=100;
+  if (cmd == 'x') if (cas_plneni < 10000) cas_plneni+=100;
+  if (cmd == 'c') xflash_write(cas_plneni);
+
   char s = cmd-0x30;
   if (s > 9) return;
   stav = (stav_t)s;
@@ -346,7 +352,6 @@ void tick() {
   tick_all();
 }
 
-void xflash_write(uint32_t data);
 
 extern "C" void my_setup() {
   setup();
