@@ -9,6 +9,9 @@
 #include <vector>
 #include <string.h>
 
+
+
+int cas_plneni = 3000;
 //auto p_status = new povel_t();
 auto p_status = new blikac_t();
 
@@ -79,7 +82,7 @@ void setup() {
 }
 
 
-enum class stav_t  {ERR, START, TEST_LISU, TEST_FORMY, KONTROLA, PLNENI_FORMY, LISOVANI};
+enum class stav_t  {ERR, START, TEST_LISU, TEST_FORMY, KONTROLA, PLNENI_FORMY, LISOVANI, VYJMUTI_VYLISKU};
 static const char *get_stav(stav_t s) {
   switch (s) {
     case stav_t::ERR: return "ERR";
@@ -89,6 +92,7 @@ static const char *get_stav(stav_t s) {
     case stav_t::PLNENI_FORMY: return "PLNENI_FORMY";
     case stav_t::KONTROLA: return "KONTROLA";
     case stav_t::LISOVANI: return "LISOVANI";
+    case stav_t::VYJMUTI_VYLISKU: return "VYJMUTI_VYLISKU";
   }
   return "??";
 }
@@ -140,20 +144,20 @@ void handle_test_lisu() {
   }
 }
 
-enum class stav_plneni_formy_t  {START, LIS_JEDE_HORE, LIS_JEDE_DOLU};
-stav_plneni_formy_t stav_plneni_formy;
 
 enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 stav_test_formy_t stav_test_formy = stav_test_formy_t::ERR;
-void usart_command(char cmd) {
+/*void usart_command(char cmd) {
   char s = cmd-0x30;
   if (s > 9) return;
   stav = (stav_t)s;
   if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
   if (stav == stav_t::PLNENI_FORMY) stav_plneni_formy = stav_plneni_formy_t::START;
 
-}
+}*/
 
+enum class stav_plneni_formy_t  {START, LIS_JEDE_HORE, LIS_CEKA, LIS_JEDE_DOLU};
+stav_plneni_formy_t stav_plneni_formy;
 const char *test_formy_string(stav_test_formy_t s) {
   switch (s) {
     case stav_test_formy_t::ERR: return "ERR";
@@ -215,6 +219,11 @@ void handle_kontrola() {
   stav_plneni_formy = stav_plneni_formy_t::START;
 }
 
+
+enum class stav_lisovani_t  {DOLU, NAHORU};
+stav_lisovani_t stav_lisovani;
+
+int list_ceka_start;
 void handle_plneni_formy() {
   if (stav_plneni_formy == stav_plneni_formy_t::START) {
     p_lid->set(STAV_L);
@@ -226,15 +235,42 @@ void handle_plneni_formy() {
     if (s_lih->get() != STAV_L) return;
     p_lid->set(STAV_H);
     p_lih->set(STAV_L);
-    stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_DOLU;
+    stav_plneni_formy = stav_plneni_formy_t::LIS_CEKA;
+    list_ceka_start = millis();
     return;
   }
+  if (stav_plneni_formy == stav_plneni_formy_t::LIS_CEKA) {
+    if ((list_ceka_start+cas_plneni) > millis()) return;
+    stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_DOLU;
+  }
   if (stav_plneni_formy == stav_plneni_formy_t::LIS_JEDE_DOLU) {
+    if (s_lir->get() != STAV_L) return;
+    stav = stav_t::LISOVANI;
+    stav_lisovani = stav_lisovani_t::DOLU;
+  }
+}
+
+void handle_lisovani() {
+  if (stav_lisovani == stav_lisovani_t::DOLU) {
     if (s_lid->get() != STAV_L) return;
+    p_lih->set(STAV_H);
+    p_lid->set(STAV_L);
+    stav_lisovani = stav_lisovani_t::NAHORU;
+  }
+  if (stav_lisovani == stav_lisovani_t::NAHORU) {
+    if (s_lir->get() != STAV_L) return;
     p_lih->set(STAV_L);
     p_lid->set(STAV_L);
-    stav = stav_t::LISOVANI;
+    stav = stav_t::VYJMUTI_VYLISKU;
   }
+}
+void usart_command(char cmd) {
+  char s = cmd-0x30;
+  if (s > 9) return;
+  stav = (stav_t)s;
+  if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
+  if (stav == stav_t::PLNENI_FORMY) stav_plneni_formy = stav_plneni_formy_t::START;
+  if (stav == stav_t::LISOVANI) stav_lisovani = stav_lisovani_t::DOLU;
 }
 
 void send_debug() {
@@ -254,6 +290,7 @@ void send_debug() {
     switch (stav_plneni_formy) {
       case stav_plneni_formy_t::START: strcat(buf, " start"); break;
       case stav_plneni_formy_t::LIS_JEDE_HORE: strcat(buf, " jede nahoru"); break;
+      case stav_plneni_formy_t::LIS_CEKA: strcat(buf, " ceka"); break;
       case stav_plneni_formy_t::LIS_JEDE_DOLU: strcat(buf, " jede_dolu"); break;
       default: strcat(buf, " ???"); break;
     }
@@ -287,7 +324,8 @@ void tick() {
     case stav_t::TEST_FORMY: handle_test_formy(); break;
     case stav_t::KONTROLA: handle_kontrola(); break;
     case stav_t::PLNENI_FORMY: handle_plneni_formy(); break;
-    case stav_t::LISOVANI: break;
+    case stav_t::LISOVANI: handle_lisovani(); break;
+    case stav_t::VYJMUTI_VYLISKU: break;
   }
   dump_all();
   tick_all();
@@ -300,3 +338,4 @@ extern "C" void my_setup() {
 extern "C" void my_loop() {
   tick();
 }
+
