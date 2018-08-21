@@ -36,6 +36,9 @@ auto s_dfz = new signal_t();
 auto pm_fot = new povel_t();
 auto pm_fza = new povel_t();
 
+auto p_err_lis = new povel_t();
+auto p_err_form = new povel_t();
+
 std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
 
 void xflash_write(uint32_t data);
@@ -79,6 +82,8 @@ void setup() {
   pm_fot->setup ("pm_fot",  GPIOB, GPIO1);
   pm_fza->setup ("pm_fza",  GPIOB, GPIO0);
 
+  p_err_lis->setup ("p_err_lis",  GPIOB, GPIO10);
+  p_err_form->setup ("p_err_form",  GPIOB, GPIO11);
 
   cas_plneni = *((uint32_t*)0x800f000);
   if (cas_plneni > 100000) cas_plneni = 2000;
@@ -130,11 +135,12 @@ void handle_test_formy_start();
 void handle_test_lisu() {
   if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
      stav = stav_t::ERR;
-
+     p_err_lis->set(STAV_H);
   }
-  if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
+  if ((s_lid->get() == STAV_L) && (s_lih->get() == STAV_L)) {
     stav = stav_t::ERR;
     log("lis v ref i krajni poloze -> error");
+     p_err_lis->set(STAV_H);
     return;
   }
   if (s_lir->get() == STAV_L) {
@@ -186,6 +192,10 @@ void handle_test_formy_start() {
 }
 
 void handle_test_formy() {
+  if (s_lir->get() != STAV_L) {
+    stav_test_formy = stav_test_formy_t::ERR;
+    p_err_form->set(STAV_H);
+  }
   INFO("test formy stav: %s", test_formy_string(stav_test_formy));
   if (stav_test_formy == stav_test_formy_t::ODJISTUJI) {
     if (s_zfo->get() != STAV_L) {
