@@ -43,7 +43,7 @@ struct timed_signal_t : public component_t {
 
   int stav;
   int curr_stav;
-  int curr_time;
+  uint32_t curr_time;
   const char *name;
   int port, pin;
   int up_time = 1;

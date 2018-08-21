@@ -235,7 +235,7 @@ void handle_kontrola() {
 enum class stav_lisovani_t  {DOLU, NAHORU};
 stav_lisovani_t stav_lisovani;
 
-int list_ceka_start;
+uint32_t list_ceka_start;
 void handle_plneni_formy() {
   if (stav_plneni_formy == stav_plneni_formy_t::START) {
     p_lid->set(STAV_L);
@@ -252,7 +252,7 @@ void handle_plneni_formy() {
     return;
   }
   if (stav_plneni_formy == stav_plneni_formy_t::LIS_CEKA) {
-    if ((list_ceka_start+(int)cas_plneni) > millis()) return;
+    if ((list_ceka_start+cas_plneni) > millis()) return;
     stav_plneni_formy = stav_plneni_formy_t::LIS_JEDE_DOLU;
   }
   if (stav_plneni_formy == stav_plneni_formy_t::LIS_JEDE_DOLU) {
@@ -318,6 +318,8 @@ void send_debug() {
   }
   //if (s_dfo->get() == STAV_L) strcat(buf, " aaa");
   //if (s_dfo->get() == STAV_H) strcat(buf, " bbb");
+  strcat(buf, " time:");
+  utoa(millis(), buf+strlen(buf), 10);
   strcat(buf, "\r\n");
   usart1_send(buf);
 }

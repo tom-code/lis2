@@ -16,7 +16,7 @@ inline void log(const char *msg) {
 
 #endif
 
-extern int board_uptime_millis;
+extern uint32_t board_uptime_millis;
 
-inline int millis() { return board_uptime_millis; }
+inline uint32_t millis() { return board_uptime_millis; }
 

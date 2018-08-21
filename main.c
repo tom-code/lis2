@@ -9,7 +9,7 @@ int my_setup();
 int my_loop();
 
 
-int board_uptime_millis = 0;
+uint32_t board_uptime_millis = 0;
 
 void sys_tick_handler(void)
 {
