@@ -262,6 +262,8 @@ void handle_plneni_formy() {
   }
 }
 
+enum class stav_vyjmuti_t  {START, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
+stav_vyjmuti_t stav_vyjmuti;
 void handle_lisovani() {
   if (stav_lisovani == stav_lisovani_t::DOLU) {
     if (s_lid->get() != STAV_L) return;
@@ -274,6 +276,41 @@ void handle_lisovani() {
     p_lih->set(STAV_L);
     p_lid->set(STAV_L);
     stav = stav_t::VYJMUTI_VYLISKU;
+    stav_vyjmuti = stav_vyjmuti_t::START;
+  }
+}
+
+void handle_vyjmuti() {
+  if (stav_vyjmuti == stav_vyjmuti_t::START) {
+    p_fzoff->set(STAV_H);
+    stav_vyjmuti = stav_vyjmuti_t::ODJISTUJI;
+    return;
+  }
+  if (stav_vyjmuti == stav_vyjmuti_t::ODJISTUJI) {
+    if (s_zfo->get() != STAV_L) return;
+    p_fzoff->set(STAV_L);
+    stav_vyjmuti = stav_vyjmuti_t::OTEVIRAM;
+    pm_fot->set(STAV_H);
+    return;
+  }
+  if (stav_vyjmuti == stav_vyjmuti_t::OTEVIRAM) {
+    if (s_dfo->get() != STAV_L) return;
+    pm_fot->set(STAV_L);
+    pm_fza->set(STAV_H);
+    stav_vyjmuti = stav_vyjmuti_t::ZAVIRAM;
+    return;
+  }
+  if (stav_vyjmuti == stav_vyjmuti_t::ZAVIRAM) {
+    if (s_dfz->get() != STAV_L) return;
+    pm_fza->set(STAV_L);
+    stav_vyjmuti = stav_vyjmuti_t::ZAJISTUJI;
+    return;
+  }
+  if (stav_vyjmuti == stav_vyjmuti_t::ZAJISTUJI) {
+    if (s_zfz->get() != STAV_L) return;
+    p_fzon->set(STAV_L);
+    stav = stav_t::KONTROLA;
+    return;
   }
 }
 void usart_command(char cmd) {
@@ -288,6 +325,7 @@ void usart_command(char cmd) {
   if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
   if (stav == stav_t::PLNENI_FORMY) stav_plneni_formy = stav_plneni_formy_t::START;
   if (stav == stav_t::LISOVANI) stav_lisovani = stav_lisovani_t::DOLU;
+  if (stav == stav_t::VYJMUTI_VYLISKU) stav_vyjmuti = stav_vyjmuti_t::START;
 }
 
 void send_debug() {
@@ -296,6 +334,16 @@ void send_debug() {
   if (stav == stav_t::START) {
     strcat(buf, " cas_plneni:");
     utoa(cas_plneni, buf+strlen(buf), 10);
+  }
+  if (stav == stav_t::VYJMUTI_VYLISKU) {
+    switch (stav_vyjmuti) {
+      case stav_vyjmuti_t::START: strcat(buf, " start"); break;
+      case stav_vyjmuti_t::ODJISTUJI: strcat(buf, " odjistuji"); break;
+      case stav_vyjmuti_t::OTEVIRAM: strcat(buf, " oteviram"); break;
+      case stav_vyjmuti_t::ZAVIRAM: strcat(buf, " zaviram"); break;
+      case stav_vyjmuti_t::ZAJISTUJI: strcat(buf, " zajistuji"); break;
+      default : strcat(buf, " ???"); break;
+    }
   }
   if (stav == stav_t::TEST_FORMY) {
     switch (stav_test_formy) {
@@ -348,7 +396,7 @@ void tick() {
     case stav_t::KONTROLA: handle_kontrola(); break;
     case stav_t::PLNENI_FORMY: handle_plneni_formy(); break;
     case stav_t::LISOVANI: handle_lisovani(); break;
-    case stav_t::VYJMUTI_VYLISKU: break;
+    case stav_t::VYJMUTI_VYLISKU: handle_vyjmuti(); break;
   }
   dump_all();
   tick_all();
