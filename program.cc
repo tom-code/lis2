@@ -32,6 +32,7 @@ auto p_fzoff = new povel_t();
 auto p_fzon = new povel_t();
 auto s_dfo = new timed_signal_t();
 auto s_dfz = new signal_t();
+auto s_tend = new signal_t();
 
 auto pm_fot = new povel_t();
 auto pm_fza = new povel_t();
@@ -39,7 +40,8 @@ auto pm_fza = new povel_t();
 auto p_err_lis = new povel_t();
 auto p_err_form = new povel_t();
 
-std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih, s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza};
+std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih,
+                                      s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza, s_tend};
 
 void xflash_write(uint32_t data);
 void dump_all() {
@@ -78,6 +80,7 @@ void setup() {
 
   s_dfo->setup ("s_dfo",  GPIOA, GPIO9);
   s_dfz->setup ("s_dfz",  GPIOA, GPIO10);
+  s_tend->setup("s_tend",  GPIOA, GPIO8);
 
   pm_fot->setup ("pm_fot",  GPIOB, GPIO1);
   pm_fza->setup ("pm_fza",  GPIOB, GPIO0);
@@ -276,7 +279,7 @@ enum class stav_vyjmuti_t  {START, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 stav_vyjmuti_t stav_vyjmuti;
 void handle_lisovani() {
   if (stav_lisovani == stav_lisovani_t::DOLU) {
-    if (s_lid->get() != STAV_L) return;
+    if ((s_lid->get() != STAV_L) && (s_tend->get() != STAV_L)) return;
     p_lih->set(STAV_H);
     p_lid->set(STAV_L);
     stav_lisovani = stav_lisovani_t::NAHORU;
@@ -345,6 +348,13 @@ void send_debug() {
     strcat(buf, " cas_plneni:");
     utoa(cas_plneni, buf+strlen(buf), 10);
   }
+  if (stav == stav_t::LISOVANI) {
+    switch (stav_lisovani) {
+      case stav_lisovani_t::DOLU: strcat(buf, " dolu"); break;
+      case stav_lisovani_t::NAHORU: strcat(buf, " nahoru"); break;
+      default : strcat(buf, " ???"); break;
+    }
+  }
   if (stav == stav_t::VYJMUTI_VYLISKU) {
     switch (stav_vyjmuti) {
       case stav_vyjmuti_t::START: strcat(buf, " start"); break;
@@ -382,6 +392,27 @@ void send_debug() {
   usart1_send(buf);
 }
 
+
+void chyby() {
+  if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+  }
+  if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+  }
+  if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+  }
+
+  if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_form->set(STAV_H);
+  }
+}
+
 int tt = 0;
 int last_millis = 0;
 void tick() {
@@ -398,6 +429,7 @@ void tick() {
     last_millis = now;
   }
   INFO("\ntick stav=%s cas=%d", get_stav(stav), time); time++;
+  chyby();
   switch (stav) {
     case stav_t::ERR: break;
     case stav_t::START: handle_start(); break;
