@@ -368,8 +368,8 @@ void send_debug() {
   if (stav == stav_t::TEST_FORMY) {
     switch (stav_test_formy) {
       case stav_test_formy_t::ODJISTUJI: strcat(buf, " odjistuji"); break;
-      case stav_test_formy_t::OTEVIRAM: strcat(buf, " oteviram"); break;
-      case stav_test_formy_t::ZAVIRAM: strcat(buf, " zaviram"); break;
+      case stav_test_formy_t::OTEVIRAM: strcat(buf, " obsluha otevira"); break;
+      case stav_test_formy_t::ZAVIRAM: strcat(buf, " obsluha zavira"); break;
       case stav_test_formy_t::ZAJISTUJI: strcat(buf, " zajistuji"); break;
       case stav_test_formy_t::ERR: strcat(buf, " error"); break;
       default: strcat(buf, " ???"); break;
@@ -398,7 +398,7 @@ void chyby() {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
   }
-  if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
+  if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_L) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
   }
