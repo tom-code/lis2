@@ -129,10 +129,11 @@ void reset() {
 
 
 void handle_start() {
-//automat??
+  if (s_auto->get() == STAV_L) {
+    p_rdy->set(STAV_H);
+  }
   if ((s_start->get() == STAV_L) && (s_auto->get() == STAV_L)) {
     log("zmacknuto start -> jdeme na test lisu");
-    p_rdy->set(STAV_H);
     stav = stav_t::TEST_LISU;
   }
 }
@@ -170,17 +171,11 @@ void handle_test_lisu() {
 
 enum class stav_test_formy_t  {ERR, ODJISTUJI, OTEVIRAM, ZAVIRAM, ZAJISTUJI};
 stav_test_formy_t stav_test_formy = stav_test_formy_t::ERR;
-/*void usart_command(char cmd) {
-  char s = cmd-0x30;
-  if (s > 9) return;
-  stav = (stav_t)s;
-  if (stav == stav_t::TEST_FORMY) stav_test_formy = stav_test_formy_t::ODJISTUJI;
-  if (stav == stav_t::PLNENI_FORMY) stav_plneni_formy = stav_plneni_formy_t::START;
-
-}*/
 
 enum class stav_plneni_formy_t  {START, LIS_JEDE_HORE, LIS_CEKA, LIS_JEDE_DOLU};
 stav_plneni_formy_t stav_plneni_formy;
+
+
 const char *test_formy_string(stav_test_formy_t s) {
   switch (s) {
     case stav_test_formy_t::ERR: return "ERR";
@@ -329,6 +324,8 @@ void handle_vyjmuti() {
     return;
   }
 }
+
+
 void usart_command(char cmd) {
 
   if (cmd == 'z') if (cas_plneni > 100) cas_plneni-=100;
