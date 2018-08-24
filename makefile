@@ -11,9 +11,11 @@ LDLIBS = -lstdc++_nano -lc_nano -lopencm3_stm32f1 -lnosys
 
 OBJ = main.o program.o usart.o flash.o
 
+
 test1.elf: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
+program.o: signal.h
 
 .PHONY: clean
 clean:

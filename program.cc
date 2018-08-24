@@ -18,6 +18,7 @@ auto p_status = new blikac_t();
 
 
 auto s_start = new signal_t();
+auto s_auto = new signal_t();
 auto p_rdy = new povel_t();
 auto s_lih = new signal_t();
 auto s_lid = new signal_t();
@@ -40,7 +41,7 @@ auto pm_fza = new povel_t();
 auto p_err_lis = new povel_t();
 auto p_err_form = new povel_t();
 
-std::vector<component_t*> components {p_status, s_start, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih,
+std::vector<component_t*> components {p_status, s_start, s_auto, p_rdy, s_lih, s_lid, s_lip, s_lir, p_lid, p_lih,
                                       s_zfz, s_zfo, p_fzoff, p_fzon, s_dfo, s_dfz, pm_fot, pm_fza, s_tend};
 
 void xflash_write(uint32_t data);
@@ -64,6 +65,7 @@ void setup() {
 
 
   s_start->setup("s_start", GPIOB, GPIO8);
+  s_auto->setup("s_auto", GPIOB, GPIO9);
 
   p_rdy->setup("p_rdy", GPIOA, GPIO7);
   s_lih->setup("s_lih", GPIOB, GPIO15);
@@ -127,7 +129,8 @@ void reset() {
 
 
 void handle_start() {
-  if (s_start->get() == STAV_L) {
+//automat??
+  if ((s_start->get() == STAV_L) && (s_auto->get() == STAV_L)) {
     log("zmacknuto start -> jdeme na test lisu");
     p_rdy->set(STAV_H);
     stav = stav_t::TEST_LISU;
@@ -410,6 +413,17 @@ void chyby() {
   if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_form->set(STAV_H);
+  }
+
+
+  if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
+     stav = stav_t::ERR;
+     p_err_lis->set(STAV_H);
+  }
+  if ((s_lid->get() == STAV_L) && (s_lih->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    return;
   }
 }
 
