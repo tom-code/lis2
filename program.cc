@@ -1,3 +1,4 @@
+//#define STM32F1
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/flash.h>
 
@@ -67,7 +68,7 @@ void setup() {
   s_start->setup("s_start", GPIOB, GPIO8);
   s_auto->setup("s_auto", GPIOB, GPIO9);
 
-  p_rdy->setup("p_rdy", GPIOA, GPIO7);
+  p_rdy->setup("p_rdy", GPIOA, GPIO6);
   s_lih->setup("s_lih", GPIOB, GPIO15);
   s_lid->setup("s_lid", GPIOB, GPIO13);
   s_lip->setup("s_lip", GPIOB, GPIO12);
@@ -87,8 +88,8 @@ void setup() {
   pm_fot->setup ("pm_fot",  GPIOB, GPIO1);
   pm_fza->setup ("pm_fza",  GPIOB, GPIO0);
 
-  p_err_lis->setup ("p_err_lis",  GPIOB, GPIO10);
-  p_err_form->setup ("p_err_form",  GPIOB, GPIO11);
+  p_err_lis->setup ("p_err_lis",  GPIOB, GPIO11);
+  p_err_form->setup ("p_err_form",  GPIOB, GPIO10);
 
   cas_plneni = *((uint32_t*)0x800f000);
   if (cas_plneni > 100000) cas_plneni = 2000;
@@ -129,6 +130,7 @@ void reset() {
 
 
 void handle_start() {
+//  p_err_lis->set(STAV_H);
   if (s_auto->get() == STAV_L) {
     p_rdy->set(STAV_H);
   }
@@ -159,10 +161,20 @@ void handle_test_lisu() {
   }
   if (s_lip->get() == STAV_H) {
     INFO("lis je pod -> lis pojede nahoru")
+    if (s_lih->get() == STAV_L) {
+      p_lid->set(STAV_L);
+      p_lih->set(STAV_L);
+      return;
+    }
     p_lid->set(STAV_H);
     p_lih->set(STAV_L);
   } else {
     INFO("lis je nad -> lis pojede dolu")
+    if (s_lid->get() == STAV_L) {
+      p_lid->set(STAV_L);
+      p_lih->set(STAV_L);
+      return;
+    }
     p_lid->set(STAV_L);
     p_lih->set(STAV_H);
   }
@@ -195,7 +207,7 @@ void handle_test_formy_start() {
 void handle_test_formy() {
   if (s_lir->get() != STAV_L) {
     stav_test_formy = stav_test_formy_t::ERR;
-    p_err_form->set(STAV_H);
+    p_err_lis->set(STAV_H);
   }
   INFO("test formy stav: %s", test_formy_string(stav_test_formy));
   if (stav_test_formy == stav_test_formy_t::ODJISTUJI) {
@@ -396,15 +408,15 @@ void send_debug() {
 void chyby() {
   if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
     stav = stav_t::ERR;
-    p_err_lis->set(STAV_H);
+    p_err_form->set(STAV_H);
   }
   if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_L) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
     stav = stav_t::ERR;
-    p_err_lis->set(STAV_H);
+    p_err_form->set(STAV_H);
   }
   if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
     stav = stav_t::ERR;
-    p_err_lis->set(STAV_H);
+    p_err_form->set(STAV_H);
   }
 
   if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_L)) {
@@ -439,6 +451,7 @@ void tick() {
     if ((now % 500) == 0) send_debug();
     last_millis = now;
   }
+  if (now < 1000) return;
   INFO("\ntick stav=%s cas=%d", get_stav(stav), time); time++;
   chyby();
   switch (stav) {
