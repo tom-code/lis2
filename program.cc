@@ -1,4 +1,4 @@
-//#define STM32F1
+#define STM32F1
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/flash.h>
 
@@ -327,6 +327,7 @@ void handle_vyjmuti() {
     if (s_dfz->get() != STAV_L) return;
     pm_fza->set(STAV_L);
     stav_vyjmuti = stav_vyjmuti_t::ZAJISTUJI;
+    p_fzon->set(STAV_H);
     return;
   }
   if (stav_vyjmuti == stav_vyjmuti_t::ZAJISTUJI) {
