@@ -33,6 +33,7 @@ auto s_zfo = new signal_t();
 auto p_fzoff = new povel_t();
 auto p_fzon = new povel_t();
 auto s_dfo = new timed_signal_t();
+//auto s_dfo = new signal_t();
 auto s_dfz = new signal_t();
 auto s_tend = new signal_t();
 
@@ -81,7 +82,7 @@ void setup() {
   p_fzoff->setup("p_fzoff", GPIOA, GPIO3);
   p_fzon->setup ("p_fzon",  GPIOA, GPIO2);
 
-  s_dfo->setup ("s_dfo",  GPIOA, GPIO9);
+  s_dfo->setup ("s_dfo",  GPIOA, GPIO9); //a9
   s_dfz->setup ("s_dfz",  GPIOA, GPIO10);
   s_tend->setup("s_tend",  GPIOA, GPIO8);
 
@@ -120,12 +121,14 @@ static const char *get_stav(stav_t s) {
 }
 
 stav_t stav = stav_t::ERR;
+const char *err_text = "init";
 int time = 0;
 void reset() {
   INFO("reset");
   time = 0;
   p_rdy->set(STAV_L);
   stav = stav_t::START;
+  err_text = "?";
 }
 
 
@@ -361,6 +364,10 @@ void send_debug() {
     strcat(buf, " cas_plneni:");
     utoa(cas_plneni, buf+strlen(buf), 10);
   }
+  if (stav == stav_t::ERR) {
+    strcat(buf, "");
+    strcat(buf, err_text);
+  }
   if (stav == stav_t::LISOVANI) {
     switch (stav_lisovani) {
       case stav_lisovani_t::DOLU: strcat(buf, " dolu"); break;
@@ -407,6 +414,7 @@ void send_debug() {
 
 
 void chyby() {
+  /*
   if ((s_dfz->get() == STAV_H) && (s_dfo->get() == STAV_H) && (s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_form->set(STAV_H);
@@ -423,9 +431,26 @@ void chyby() {
   if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_form->set(STAV_H);
+  }*/
+  if ((s_dfz->get() == STAV_L) && (s_dfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_form->set(STAV_H);
+    err_text = "forma1 senzory";
+    return;
+  }
+  if ((s_zfz->get() == STAV_L) && (s_zfo->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_form->set(STAV_H);
+    err_text = "zavora";
+    return;
+  }
+  if ((s_dfo->get() == STAV_H) && (s_dfz->get() == STAV_H)) {
+    p_err_form->set(STAV_H);
+    err_text = "format";
+    return;
   }
 
-
+/*
   if ((s_lir->get() == STAV_L) && ((s_lid->get() == STAV_L) || (s_lih->get() == STAV_L))) {
      stav = stav_t::ERR;
      p_err_lis->set(STAV_H);
@@ -434,6 +459,47 @@ void chyby() {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     return;
+  }
+  */
+  if ((s_lih->get() == STAV_L) && (s_lid->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "h-d";
+    return;
+  }
+  if ((s_lip->get() == STAV_H) && (s_lid->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "p-d";
+    return;
+  }
+  if ((s_lir->get() == STAV_L) && (s_lih->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "r-h";
+    return;
+  }
+  if ((s_lip->get() == STAV_H) && (s_lir->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "p-r";
+    return;
+  }
+  if ((s_lid->get() == STAV_H) && (s_lir->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "d-r";
+    return;
+  }
+  if ((s_lip->get() == STAV_H) && (s_lih->get() == STAV_L)) {
+    stav = stav_t::ERR;
+    p_err_lis->set(STAV_H);
+    err_text = "p-h";
+    return;
+  }
+
+  if (stav != stav_t::ERR) {
+    p_err_form->set(STAV_L);
   }
 }
 
