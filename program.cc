@@ -467,36 +467,37 @@ void chyby() {
     err_text = "h-d";
     return;
   }
-  if ((s_lip->get() == STAV_H) && (s_lid->get() == STAV_L)) {
+  /*if ((s_lip->get() == STAV_H) && (s_lid->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     err_text = "p-d";
     return;
-  }
+  }*/
+  
   if ((s_lir->get() == STAV_L) && (s_lih->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     err_text = "r-h";
     return;
   }
-  if ((s_lip->get() == STAV_H) && (s_lir->get() == STAV_L)) {
+  /*if ((s_lip->get() == STAV_H) && (s_lir->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     err_text = "p-r";
     return;
-  }
-  if ((s_lid->get() == STAV_H) && (s_lir->get() == STAV_L)) {
+  }*/
+  if ((s_lid->get() == STAV_L) && (s_lir->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     err_text = "d-r";
     return;
   }
-  if ((s_lip->get() == STAV_H) && (s_lih->get() == STAV_L)) {
+  /*if ((s_lip->get() == STAV_H) && (s_lih->get() == STAV_L)) {
     stav = stav_t::ERR;
     p_err_lis->set(STAV_H);
     err_text = "p-h";
     return;
-  }
+  }*/
 
   if (stav != stav_t::ERR) {
     p_err_form->set(STAV_L);
